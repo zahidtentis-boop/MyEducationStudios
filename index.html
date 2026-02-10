@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>3D Bee Swarm with Hive</title>
+<title>3D Bee Swarm Prototype</title>
 <style>
 body { margin:0; overflow:hidden; font-family:sans-serif; }
 canvas { display:block; }
@@ -20,7 +20,6 @@ canvas { display:block; }
 </head>
 <body>
 
-<!-- Inventory UI -->
 <div id="itemsBox">
   <h3>Items</h3>
   <div id="inventoryItems"></div>
@@ -42,25 +41,36 @@ canvas { display:block; }
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 
 /* ====== THREE.JS SETUP ====== */
 let scene = new THREE.Scene();
 scene.background = new THREE.Color(0xa0d0ff);
+
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.set(0,20,20);
-camera.lookAt(0,0,0);
+camera.position.set(10, 15, 20);
 
 let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+/* Orbit Controls for movable camera */
+let controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(0,0,0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+controls.maxPolarAngle = Math.PI/2.2; // prevent going below ground
+controls.minDistance = 5;
+controls.maxDistance = 50;
+
+/* LIGHTS */
 let light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(10,20,10);
+light.position.set(20,20,10);
 scene.add(light);
 scene.add(new THREE.AmbientLight(0x404040));
 
-/* ====== GROUND ====== */
+/* GROUND */
 let ground = new THREE.Mesh(
   new THREE.PlaneGeometry(50,50),
   new THREE.MeshStandardMaterial({color:0x88cc88})
@@ -68,7 +78,7 @@ let ground = new THREE.Mesh(
 ground.rotation.x = -Math.PI/2;
 scene.add(ground);
 
-/* ====== PLAYER ====== */
+/* ===== PLAYER ===== */
 let player = new THREE.Group();
 let head = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0xffcc99}));
 head.position.y = 2.5; player.add(head);
@@ -78,43 +88,44 @@ let hair = new THREE.Mesh(new THREE.BoxGeometry(1.1,0.4,1.1), new THREE.MeshStan
 hair.position.y = 3; player.add(hair);
 scene.add(player);
 
-/* ====== HIVE ====== */
+/* ===== HIVE ===== */
 let hive = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color:0xffff00}));
 hive.position.set(-15,1,0);
 scene.add(hive);
-const hiveSlotPosition = new THREE.Vector3(hive.position.x, hive.position.y + 1, hive.position.z);
+const hiveSlotPosition = new THREE.Vector3(hive.position.x, hive.position.y+1, hive.position.z);
 const hiveSlotRadius = 1.5;
 
-/* ====== FLOWERS ====== */
+/* ===== FLOWERS ===== */
 let flowers = [];
-for(let i=0;i<10;i++){
+for(let i=0;i<15;i++){
   let f = new THREE.Mesh(new THREE.SphereGeometry(0.5,16,16), new THREE.MeshStandardMaterial({color:0xff88cc}));
   f.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
   scene.add(f);
   flowers.push(f);
 }
 
-/* ====== BEARS & QUESTS ====== */
-let bears = [], quests = [];
+/* ===== BEARS & QUESTS ===== */
+let bears = [], quests=[];
 for(let i=0;i<3;i++){
   let b = new THREE.Mesh(new THREE.BoxGeometry(1,1.5,1), new THREE.MeshStandardMaterial({color:0x885522}));
   b.position.set(Math.random()*20-10,0.75,Math.random()*20-10);
   scene.add(b); bears.push(b);
-  quests.push({bearIndex:i,target:5+i*5,completed:false});
+  quests.push({bearIndex:i, target:5+i*5, completed:false});
 }
 
-/* ====== PLAYER STATS ====== */
-let inventory = 0, hivePollen = 0, speed = 0.2, autoPollen = 0;
+/* ===== PLAYER STATS ===== */
+let inventory=0, hivePollen=0, speed=0.3, autoPollen=0;
 let keys = {};
-document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+document.addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
 
-/* ====== UI ELEMENTS ====== */
+/* ===== UI ===== */
 const questBox = document.getElementById("questBox");
 const shopBox = document.getElementById("shopBox");
 const inventoryBox = document.getElementById("inventoryBox");
+const inventoryItemsDiv = document.getElementById("inventoryItems");
 
-/* ====== SHOP ====== */
+/* ===== SHOP ===== */
 function openShop(){ 
   shopBox.style.display="block"; 
   document.getElementById("shopPollen").innerText = inventory; 
@@ -127,50 +138,46 @@ function buyGear(type){
   document.getElementById("shopPollen").innerText = inventory;
 }
 
-/* ====== BEES & ITEMS ====== */
-let bees = [];
-let itemsInventory = ["Basic Egg"];
-const inventoryItemsDiv = document.getElementById("inventoryItems");
-let carriedEgg = null;
+/* ===== BEES & EGGS ===== */
+let bees=[], itemsInventory=["Basic Egg"];
+let carriedEgg=null;
 
-// Reset Items UI
+// Reset inventory items UI
 function resetItems(){
-  inventoryItemsDiv.innerHTML = '';
+  inventoryItemsDiv.innerHTML='';
   itemsInventory.forEach(i=>{
     if(i==="Basic Egg"){
       let egg = document.createElement("div");
-      egg.className = "item";
-      egg.innerText = "🟡 Basic Egg";
+      egg.className="item";
+      egg.innerText="🟡 Basic Egg";
       inventoryItemsDiv.appendChild(egg);
     }
   });
 }
 resetItems();
 
-// Pick up egg
+// Press Q to pick up egg
 document.addEventListener("keydown", e=>{
-  if(e.key.toLowerCase() === "q" && itemsInventory.includes("Basic Egg") && !carriedEgg){
+  if(e.key.toLowerCase()==="q" && itemsInventory.includes("Basic Egg") && !carriedEgg){
     itemsInventory = itemsInventory.filter(x=>x!=="Basic Egg");
     resetItems();
-
-    // Create 3D egg above player
     carriedEgg = new THREE.Mesh(
       new THREE.SphereGeometry(0.3,8,8),
       new THREE.MeshStandardMaterial({color:0xffff00})
     );
-    carriedEgg.position.set(player.position.x, player.position.y + 2, player.position.z);
+    carriedEgg.position.set(player.position.x,player.position.y+2,player.position.z);
     scene.add(carriedEgg);
   }
 });
 
-// Spawn Bee
+// Spawn bee
 function spawnBee(){
   let bee = new THREE.Mesh(
     new THREE.SphereGeometry(0.2,8,8),
     new THREE.MeshStandardMaterial({color:0xffff00})
   );
   bee.position.set(player.position.x + Math.random()*2-1, 1, player.position.z + Math.random()*2-1);
-  bee.targetFlower = null;
+  bee.targetFlower=null;
   scene.add(bee);
   bees.push(bee);
 }
@@ -188,14 +195,14 @@ function getNearestFlower(bee){
 // Update bees
 function updateBees(){
   bees.forEach((bee,i)=>{
-    if(!bee.targetFlower) bee.targetFlower = getNearestFlower(bee);
+    if(!bee.targetFlower) bee.targetFlower=getNearestFlower(bee);
     if(bee.targetFlower){
-      let dir = new THREE.Vector3().subVectors(bee.targetFlower.position,bee.position);
+      let dir=new THREE.Vector3().subVectors(bee.targetFlower.position,bee.position);
       if(dir.length()>0.1){ dir.normalize(); bee.position.add(dir.multiplyScalar(0.1)); }
       else{
-        inventory+=1;
+        inventory++;
         bee.targetFlower.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
-        bee.targetFlower = null;
+        bee.targetFlower=null;
       }
       bee.position.y = 1+Math.sin(Date.now()/200+i)*0.2;
     }
@@ -205,21 +212,21 @@ function updateBees(){
 // Update carried egg
 function updateCarriedEgg(){
   if(carriedEgg){
-    carriedEgg.position.set(player.position.x, player.position.y + 2, player.position.z);
-    if(carriedEgg.position.distanceTo(hiveSlotPosition) < hiveSlotRadius){
+    carriedEgg.position.set(player.position.x,player.position.y+2,player.position.z);
+    if(carriedEgg.position.distanceTo(hiveSlotPosition)<hiveSlotRadius){
       spawnBee();
       scene.remove(carriedEgg);
-      carriedEgg = null;
+      carriedEgg=null;
       console.log("Egg hatched at hive!");
     }
   }
 }
 
-/* ====== ANIMATE LOOP ====== */
+/* ===== ANIMATE LOOP ===== */
 function animate(){
   requestAnimationFrame(animate);
 
-  // Movement
+  // Player movement (S=down, W=up, A=left, D=right)
   if(keys['w']) player.position.z -= speed;
   if(keys['s']) player.position.z += speed;
   if(keys['a']) player.position.x -= speed;
@@ -233,7 +240,7 @@ function animate(){
     }
   });
 
-  // Bears quests
+  // Bears & quests
   bears.forEach((b,i)=>{
     if(player.position.distanceTo(b.position)<1.5 && !quests[i].completed){
       questBox.style.display="block";
@@ -243,12 +250,11 @@ function animate(){
 
   if(keys['e']) openShop();
 
-  // Complete quests
   quests.forEach(q=>{
     if(!q.completed && inventory>=q.target){
       inventory-=q.target; hivePollen+=q.target; q.completed=true;
-      questBox.innerHTML = `Quest complete! Deposited ${q.target} pollen to hive.`;
-      setTimeout(()=>{ questBox.style.display="none"; },2000);
+      questBox.innerHTML=`Quest complete! Deposited ${q.target} pollen to hive.`;
+      setTimeout(()=>{questBox.style.display="none";},2000);
     }
   });
 
@@ -263,19 +269,17 @@ function animate(){
   // Update bees
   updateBees();
 
-  // Update egg
+  // Update carried egg
   updateCarriedEgg();
 
   // Camera
-  camera.position.x = player.position.x+10;
-  camera.position.z = player.position.z+10;
-  camera.lookAt(player.position);
+  controls.update();
 
   renderer.render(scene,camera);
 
   // UI
-  document.getElementById("inventory").innerText = Math.floor(inventory);
-  document.getElementById("hivePollen").innerText = Math.floor(hivePollen);
+  document.getElementById("inventory").innerText=Math.floor(inventory);
+  document.getElementById("hivePollen").innerText=Math.floor(hivePollen);
 }
 
 animate();
