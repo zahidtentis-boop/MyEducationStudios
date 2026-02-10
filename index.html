@@ -180,4 +180,57 @@ animate();
 </script>
 </body>
 </html>
+/* ==== BEES ==== */
+let bees = [];
+let beeCount = 10;
+
+// Create bees as small yellow spheres
+for (let i = 0; i < beeCount; i++) {
+  let bee = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 8, 8),
+    new THREE.MeshStandardMaterial({ color: 0xffff00 })
+  );
+  // Spawn near player randomly
+  bee.position.set(player.position.x + Math.random()*2-1, 1, player.position.z + Math.random()*2-1);
+  bee.targetFlower = null;
+  scene.add(bee);
+  bees.push(bee);
+}
+
+// Function to find the nearest flower
+function getNearestFlower(bee) {
+  let nearest = null;
+  let minDist = Infinity;
+  flowers.forEach(f => {
+    let d = bee.position.distanceTo(f.position);
+    if (d < minDist) { minDist = d; nearest = f; }
+  });
+  return nearest;
+}
+
+/* ==== UPDATE BEES IN ANIMATE LOOP ==== */
+function updateBees() {
+  bees.forEach(bee => {
+    // If bee has no target, find a flower
+    if (!bee.targetFlower) {
+      bee.targetFlower = getNearestFlower(bee);
+    }
+    // Move bee toward target flower
+    if (bee.targetFlower) {
+      let dir = new THREE.Vector3().subVectors(bee.targetFlower.position, bee.position);
+      if (dir.length() > 0.1) {
+        dir.normalize();
+        bee.position.add(dir.multiplyScalar(0.1)); // bee speed
+      } else {
+        // Reached flower, "collect" pollen
+        inventory += 1; // auto add to player inventory
+        // Move flower to new position
+        bee.targetFlower.position.set(Math.random()*20-10, 0.5, Math.random()*20-10);
+        bee.targetFlower = null; // find a new target
+      }
+    }
+    // Slight random vertical movement for realism
+    bee.position.y = 1 + Math.sin(Date.now()/200 + bee.id) * 0.2;
+  });
+}
 
