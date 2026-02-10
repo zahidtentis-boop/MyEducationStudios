@@ -5,75 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>School Game Hub</title>
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f5f5f5;
-        text-align: center;
-        margin: 0;
-        padding: 0;
-    }
-
-    header {
-        background-color: #ffcc00;
-        padding: 20px;
-    }
-
-    header h1 {
-        margin: 0;
-        color: #333;
-    }
-
-    nav {
-        margin: 20px 0;
-    }
-
-    nav button {
-        padding: 10px 20px;
-        margin: 5px;
-        font-size: 16px;
-        cursor: pointer;
-        border: none;
-        background-color: #ff9900;
-        color: white;
-        border-radius: 5px;
-    }
-
-    nav button:hover {
-        background-color: #e68a00;
-    }
-
-    #gameContainer {
-        margin: 20px auto;
-        width: 620px;
-        height: 440px;
-        border: 2px solid #ccc;
-        border-radius: 10px;
-        background-color: #fff8dc;
-        position: relative;
-    }
-
-    canvas {
-        display: block;
-        margin: auto;
-        background-color: #fff8dc;
-    }
-
-    .footer {
-        padding: 20px;
-        background-color: #ffcc00;
-        margin-top: 20px;
-    }
-
-    #scoreBoard {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        font-size: 18px;
-        color: #333;
-        background: rgba(255,255,255,0.7);
-        padding: 5px 10px;
-        border-radius: 5px;
-    }
+    body { font-family: Arial; text-align:center; margin:0; padding:0; background:#f5f5f5; }
+    header { background:#ffcc00; padding:20px; }
+    header h1 { margin:0; color:#333; }
+    nav { margin:20px 0; }
+    nav button { padding:10px 20px; margin:5px; font-size:16px; cursor:pointer; border:none; background:#ff9900; color:white; border-radius:5px; }
+    nav button:hover { background:#e68a00; }
+    #gameContainer { margin:20px auto; width:620px; height:440px; border:2px solid #ccc; border-radius:10px; background:#fff8dc; position:relative; }
+    canvas { display:block; margin:auto; background:#fff8dc; }
+    #scoreBoard { position:absolute; top:10px; left:10px; font-size:18px; color:#333; background:rgba(255,255,255,0.7); padding:5px 10px; border-radius:5px; }
 </style>
 </head>
 <body>
@@ -83,168 +23,109 @@
 </header>
 
 <nav>
-    <button onclick="loadGame('bee')">Bee Swarm Simulator</button>
-    <button onclick="loadGame('other')">Other Game</button>
+    <button onclick="loadBeeSwarm()">Bee Swarm Simulator</button>
+    <button onclick="loadOther()">Other Game</button>
 </nav>
 
 <div id="gameContainer">
-    <p style="padding-top: 180px;">Click a button above to play a game!</p>
-</div>
-
-<div class="footer">
-    &copy; 2026 Game Hub
+    <p style="padding-top:180px;">Click a button above to play a game!</p>
 </div>
 
 <script>
 const gameContainer = document.getElementById('gameContainer');
+let beeSwarmLoaded = false; // Flag to ensure only one screen
 
-function loadGame(game) {
-    gameContainer.innerHTML = ''; // Clear previous content
-    if(game === 'bee') {
-        // Create canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = 600;
-        canvas.height = 400;
-        gameContainer.appendChild(canvas);
+function loadBeeSwarm() {
+    if(beeSwarmLoaded) return; // If already loaded, do nothing
+    beeSwarmLoaded = true;
 
-        // Scoreboard
-        const scoreBoard = document.createElement('div');
-        scoreBoard.id = 'scoreBoard';
-        scoreBoard.innerText = 'Pollen: 0';
-        gameContainer.appendChild(scoreBoard);
+    gameContainer.innerHTML = ''; // Clear placeholder
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 400;
+    gameContainer.appendChild(canvas);
 
-        startBeeSwarm(canvas, scoreBoard);
-    } else if(game === 'other') {
-        gameContainer.innerHTML = '<p>Other game coming soon!</p>';
-    }
+    const scoreBoard = document.createElement('div');
+    scoreBoard.id = 'scoreBoard';
+    scoreBoard.innerText = 'Pollen: 0';
+    gameContainer.appendChild(scoreBoard);
+
+    startBeeSwarm(canvas, scoreBoard);
 }
 
-// Upgraded Bee Swarm Simulator
+function loadOther() {
+    gameContainer.innerHTML = '<p>Other game coming soon!</p>';
+}
+
+// Bee Swarm Simulator
 function startBeeSwarm(canvas, scoreBoard) {
     const ctx = canvas.getContext('2d');
 
-    // Player bees
-    let bees = [
-        { x: 300, y: 200, size: 15, color: 'yellow', speed: 5 }
-    ];
-
-    // Flowers with types
-    const flowerTypes = [
-        { color: 'pink', points: 1 },
-        { color: 'red', points: 2 },
-        { color: 'blue', points: 3 }
-    ];
+    let bee = { x: 300, y: 200, size: 15, color: 'yellow', speed: 5 };
+    const flowerTypes = [{ color:'pink', points:1 }, { color:'red', points:2 }, { color:'blue', points:3 }];
     let flowers = [];
     for(let i=0;i<10;i++){
         let type = flowerTypes[Math.floor(Math.random()*flowerTypes.length)];
-        flowers.push({
-            x: Math.random() * (canvas.width-20),
-            y: Math.random() * (canvas.height-20),
-            size: 15,
-            color: type.color,
-            points: type.points
-        });
+        flowers.push({ x: Math.random()*(canvas.width-20), y: Math.random()*(canvas.height-20), size:15, color:type.color, points:type.points });
     }
-
-    // Collectable pollen boosts
     let items = [];
-
     let score = 0;
-
-    // Keyboard controls
     let keys = {};
-    document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-    document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+    document.addEventListener('keydown', e => keys[e.key.toLowerCase()]=true);
+    document.addEventListener('keyup', e => keys[e.key.toLowerCase()]=false);
 
     function spawnItem() {
-        items.push({
-            x: Math.random()*(canvas.width-20),
-            y: Math.random()*(canvas.height-20),
-            size: 10,
-            color: 'orange',
-            points: 5
-        });
+        items.push({ x: Math.random()*(canvas.width-20), y: Math.random()*(canvas.height-20), size:10, color:'orange', points:5 });
     }
-    setInterval(spawnItem, 10000); // spawn every 10 sec
+    setInterval(spawnItem,10000);
 
     function update() {
-        bees.forEach(bee => {
-            if(keys['w']) bee.y -= bee.speed;
-            if(keys['s']) bee.y += bee.speed;
-            if(keys['a']) bee.x -= bee.speed;
-            if(keys['d']) bee.x += bee.speed;
+        if(keys['w']) bee.y -= bee.speed;
+        if(keys['s']) bee.y += bee.speed;
+        if(keys['a']) bee.x -= bee.speed;
+        if(keys['d']) bee.x += bee.speed;
 
-            bee.x = Math.max(0, Math.min(canvas.width - bee.size, bee.x));
-            bee.y = Math.max(0, Math.min(canvas.height - bee.size, bee.y));
+        bee.x = Math.max(0, Math.min(canvas.width-bee.size, bee.x));
+        bee.y = Math.max(0, Math.min(canvas.height-bee.size, bee.y));
 
-            // Collect flowers
-            flowers.forEach(flower => {
-                const dx = bee.x - flower.x;
-                const dy = bee.y - flower.y;
-                const distance = Math.sqrt(dx*dx + dy*dy);
-                if(distance < (bee.size + flower.size)/2) {
-                    score += flower.points;
-                    flower.x = Math.random() * (canvas.width - flower.size);
-                    flower.y = Math.random() * (canvas.height - flower.size);
-                    flower.points = flowerTypes[Math.floor(Math.random()*flowerTypes.length)].points;
-                    flower.color = flowerTypes[Math.floor(Math.random()*flowerTypes.length)].color;
-                }
-            });
-
-            // Collect items
-            items.forEach((item, i) => {
-                const dx = bee.x - item.x;
-                const dy = bee.y - item.y;
-                const distance = Math.sqrt(dx*dx + dy*dy);
-                if(distance < (bee.size + item.size)/2) {
-                    score += item.points;
-                    items.splice(i,1);
-                }
-            });
+        flowers.forEach(f=>{
+            const dx=bee.x-f.x, dy=bee.y-f.y;
+            if(Math.sqrt(dx*dx+dy*dy)<(bee.size+f.size)/2){
+                score+=f.points;
+                f.x=Math.random()*(canvas.width-20);
+                f.y=Math.random()*(canvas.height-20);
+                let type=flowerTypes[Math.floor(Math.random()*flowerTypes.length)];
+                f.color=type.color; f.points=type.points;
+            }
         });
 
-        // Upgrade bees automatically at score milestones
-        if(score >= 10*bees.length && bees.length < 5) {
-            bees.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: 15, color: 'yellow', speed: 5 });
-        }
+        items.forEach((item,i)=>{
+            const dx=bee.x-item.x, dy=bee.y-item.y;
+            if(Math.sqrt(dx*dx+dy*dy)<(bee.size+item.size)/2){
+                score+=item.points;
+                items.splice(i,1);
+            }
+        });
 
-        scoreBoard.innerText = 'Pollen: ' + score;
+        scoreBoard.innerText='Pollen: '+score;
     }
 
     function draw() {
         ctx.clearRect(0,0,canvas.width,canvas.height);
-
-        // Draw flowers
-        flowers.forEach(f => {
-            ctx.fillStyle = f.color;
-            ctx.beginPath();
-            ctx.arc(f.x, f.y, f.size, 0, Math.PI*2);
-            ctx.fill();
+        flowers.forEach(f=>{
+            ctx.fillStyle=f.color;
+            ctx.beginPath(); ctx.arc(f.x,f.y,f.size,0,Math.PI*2); ctx.fill();
         });
-
-        // Draw items
-        items.forEach(item => {
-            ctx.fillStyle = item.color;
-            ctx.beginPath();
-            ctx.arc(item.x, item.y, item.size, 0, Math.PI*2);
-            ctx.fill();
+        items.forEach(item=>{
+            ctx.fillStyle=item.color;
+            ctx.beginPath(); ctx.arc(item.x,item.y,item.size,0,Math.PI*2); ctx.fill();
         });
-
-        // Draw bees
-        bees.forEach(bee => {
-            ctx.fillStyle = bee.color;
-            ctx.beginPath();
-            ctx.arc(bee.x, bee.y, bee.size, 0, Math.PI*2);
-            ctx.fill();
-        });
+        ctx.fillStyle=bee.color;
+        ctx.beginPath(); ctx.arc(bee.x,bee.y,bee.size,0,Math.PI*2); ctx.fill();
     }
 
-    function gameLoop() {
-        update();
-        draw();
-        requestAnimationFrame(gameLoop);
-    }
-
+    function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
     gameLoop();
 }
 </script>
