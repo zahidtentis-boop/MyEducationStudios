@@ -4,56 +4,87 @@
 <meta charset="UTF-8">
 <title>Mini Bee Swarm</title>
 <style>
-  body { font-family: sans-serif; text-align: center; background: #f0f8ff; }
-  #flower { width:50px; height:50px; background: pink; display:inline-block; margin:20px; cursor:pointer; border-radius:50%; }
-  #stats { margin-top:20px; font-size: 1.2em; }
-  button { margin:5px; padding:5px 10px; font-size:1em; }
+  body { margin:0; overflow:hidden; background:#d0f0c0; }
+  canvas { display:block; background:#d0f0c0; margin:0 auto; }
 </style>
 </head>
 <body>
-<h1>Mini Bee Swarm</h1>
-<div id="flower"></div>
-<div id="stats">
-  Pollen: <span id="pollen">0</span> <br>
-  Bees: <span id="bees">1</span>
-</div>
-<button id="buyBee">Buy Bee (Cost: 10 Pollen)</button>
-
+<canvas id="game" width="600" height="400"></canvas>
 <script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const player = { x: 300, y: 200, size: 30, color: "yellow", speed: 4 };
 let pollen = 0;
-let bees = 1;
 
-const pollenDisplay = document.getElementById("pollen");
-const beesDisplay = document.getElementById("bees");
-const flower = document.getElementById("flower");
-const buyBeeBtn = document.getElementById("buyBee");
-
-function updateDisplay() {
-  pollenDisplay.textContent = pollen;
-  beesDisplay.textContent = bees;
+const flowers = [];
+for(let i=0; i<5; i++){
+  flowers.push({
+    x: Math.random() * (canvas.width-30),
+    y: Math.random() * (canvas.height-30),
+    size: 20,
+    color: "pink"
+  });
 }
 
-flower.addEventListener("click", () => {
-  pollen += 1;
-  updateDisplay();
-});
+const keys = {};
 
-buyBeeBtn.addEventListener("click", () => {
-  if(pollen >= 10){
-    bees += 1;
-    pollen -= 10;
-    updateDisplay();
-  } else {
-    alert("Not enough pollen!");
-  }
-});
+// Movement
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
 
-// Auto collect pollen based on bees every second
-setInterval(() => {
-  pollen += bees;
-  updateDisplay();
-}, 1000);
+function update(){
+  if(keys["ArrowUp"]) player.y -= player.speed;
+  if(keys["ArrowDown"]) player.y += player.speed;
+  if(keys["ArrowLeft"]) player.x -= player.speed;
+  if(keys["ArrowRight"]) player.x += player.speed;
 
+  // Boundaries
+  player.x = Math.max(0, Math.min(canvas.width-player.size, player.x));
+  player.y = Math.max(0, Math.min(canvas.height-player.size, player.y));
+
+  // Check collision with flowers
+  flowers.forEach((f, i) => {
+    if(player.x < f.x + f.size &&
+       player.x + player.size > f.x &&
+       player.y < f.y + f.size &&
+       player.y + player.size > f.y){
+         pollen++;
+         // Move flower to a new random location
+         f.x = Math.random() * (canvas.width-30);
+         f.y = Math.random() * (canvas.height-30);
+    }
+  });
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Draw flowers
+  flowers.forEach(f => {
+    ctx.fillStyle = f.color;
+    ctx.beginPath();
+    ctx.arc(f.x+f.size/2, f.y+f.size/2, f.size/2, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Draw player
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+
+  // Draw pollen count
+  ctx.fillStyle = "black";
+  ctx.font = "20px Arial";
+  ctx.fillText("Pollen: " + pollen, 10, 25);
+}
+
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
 </script>
 </body>
 </html>
