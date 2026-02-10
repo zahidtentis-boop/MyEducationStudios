@@ -27,3 +27,146 @@ scene.background = new THREE.Color(0xa0d0ff);
 
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.set(0, 20, 20);
+camera.lookAt(0,0,0);
+
+let renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Lights
+let light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(10,20,10);
+scene.add(light);
+
+let ambient = new THREE.AmbientLight(0x404040);
+scene.add(ambient);
+
+// Ground
+let groundGeo = new THREE.PlaneGeometry(50,50);
+let groundMat = new THREE.MeshStandardMaterial({color:0x88cc88});
+let ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+// Player (Roblox-style)
+let player = new THREE.Group();
+
+// Head
+let headGeo = new THREE.BoxGeometry(1,1,1);
+let headMat = new THREE.MeshStandardMaterial({color:0xffcc99});
+let head = new THREE.Mesh(headGeo, headMat);
+head.position.y = 2.5;
+player.add(head);
+
+// Body
+let bodyGeo = new THREE.BoxGeometry(1,1.5,0.5);
+let bodyMat = new THREE.MeshStandardMaterial({color:0x0000ff});
+let body = new THREE.Mesh(bodyGeo, bodyMat);
+body.position.y = 1.25;
+player.add(body);
+
+// Bacon Hair
+let hairGeo = new THREE.BoxGeometry(1.1,0.4,1.1);
+let hairMat = new THREE.MeshStandardMaterial({color:0xff6633});
+let hair = new THREE.Mesh(hairGeo, hairMat);
+hair.position.y = 3;
+player.add(hair);
+
+player.position.y = 0;
+scene.add(player);
+
+// Flowers
+let flowers = [];
+for(let i=0;i<10;i++){
+  let fGeo = new THREE.SphereGeometry(0.5,16,16);
+  let fMat = new THREE.MeshStandardMaterial({color:0xff88cc});
+  let f = new THREE.Mesh(fGeo, fMat);
+  f.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
+  scene.add(f);
+  flowers.push(f);
+}
+
+let pollen = 0;
+let keys = {};
+
+// Bears (NPCs that give quests)
+let bears = [];
+let quests = [];
+
+for(let i=0;i<3;i++){
+  let bGeo = new THREE.BoxGeometry(1,1.5,1);
+  let bMat = new THREE.MeshStandardMaterial({color:0x885522});
+  let b = new THREE.Mesh(bGeo, bMat);
+  b.position.set(Math.random()*20-10,0.75,Math.random()*20-10);
+  scene.add(b);
+  bears.push(b);
+
+  // Each bear has a quest: collect X pollen
+  quests.push({bearIndex: i, target: 5 + i*5, completed: false});
+}
+
+// Controls
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+const questBox = document.getElementById("questBox");
+let currentQuest = null;
+
+function animate(){
+  requestAnimationFrame(animate);
+
+  // Player movement
+  if(keys["ArrowUp"]) player.position.z -= 0.2;
+  if(keys["ArrowDown"]) player.position.z += 0.2;
+  if(keys["ArrowLeft"]) player.position.x -= 0.2;
+  if(keys["ArrowRight"]) player.position.x += 0.2;
+
+  // Collision with flowers
+  flowers.forEach(f=>{
+    if(player.position.distanceTo(f.position) < 1){
+      pollen++;
+      f.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
+    }
+  });
+
+  // Collision with bears
+  bears.forEach((b,i)=>{
+    if(player.position.distanceTo(b.position) < 1.5 && !quests[i].completed){
+      currentQuest = quests[i];
+      questBox.style.display = "block";
+      questBox.innerHTML = `Bear ${i+1} Quest: Collect ${currentQuest.target} pollen. You have ${pollen}.`;
+    }
+  });
+
+  // Check quest completion
+  if(currentQuest && pollen >= currentQuest.target){
+    currentQuest.completed = true;
+    questBox.innerHTML = `Quest Complete! Bear ${currentQuest.bearIndex+1} thanks you!`;
+    setTimeout(()=>{questBox.style.display = "none"; currentQuest = null;}, 2000);
+  }
+
+  // Camera follows player
+  camera.position.x = player.position.x + 10;
+  camera.position.z = player.position.z + 10;
+  camera.lookAt(player.position);
+
+  renderer.render(scene, camera);
+
+  // Display pollen
+  document.getElementById("pollen")?.remove();
+  let div = document.createElement("div");
+  div.id = "pollen";
+  div.style.position = "absolute";
+  div.style.top = "10px";
+  div.style.left = "10px";
+  div.style.color = "black";
+  div.style.fontSize = "20px";
+  div.style.fontFamily = "sans-serif";
+  div.innerHTML = "Pollen: " + pollen;
+  document.body.appendChild(div);
+}
+
+animate();
+</script>
+</body>
+</html>
