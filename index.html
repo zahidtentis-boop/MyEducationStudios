@@ -21,6 +21,7 @@
   <div>🐝 Pollen: <span id="pollen">0</span></div>
   <div>🏠 Hive Pollen: <span id="hivePollen">0</span></div>
   <div>🟡 Bees in Hive: <span id="hiveCount">0</span>/3</div>
+  <div>🧸 Quest: <span id="questText">None</span></div>
   <div>Press H near hive to deposit a bee</div>
 </div>
 
@@ -90,6 +91,27 @@ for(let i=0;i<20;i++){
   flowers.push(flower);
 }
 
+/* ===== BEAR QUESTS ===== */
+const bears = [];
+const quests = [];
+for(let i=0;i<2;i++){
+  const bear = new THREE.Mesh(
+    new THREE.BoxGeometry(1,1.5,1),
+    new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+  );
+  bear.position.set(Math.random()*40-20,0.75,Math.random()*40-20);
+  scene.add(bear);
+  bears.push(bear);
+
+  // Each bear has a quest: random pollen goal 5-15
+  quests.push({
+    bear: bear,
+    goal: Math.floor(Math.random()*11)+5,
+    collected: 0,
+    active: false,
+  });
+}
+
 /* ===== CONTROLS ===== */
 const keys = {};
 onkeydown = e => keys[e.key.toLowerCase()] = true;
@@ -150,6 +172,39 @@ function animate(){
     hivePollen += 0.01 * hiveBees; // each bee adds 0.01 pollen per frame
     document.getElementById("hivePollen").innerText = Math.floor(hivePollen);
   }
+
+  // Bear quest interaction
+  quests.forEach(q=>{
+    if(player.position.distanceTo(q.bear.position)<2){
+      // activate quest
+      q.active = true;
+      document.getElementById("questText").innerText = `Bring ${q.goal - q.collected} pollen to bear`;
+      if(keys.e && pollen>0){ // press E to give pollen
+        const give = Math.min(pollen, q.goal - q.collected);
+        pollen -= give;
+        q.collected += give;
+        document.getElementById("pollen").innerText = pollen;
+
+        if(q.collected >= q.goal){
+          alert(`Quest complete! Bear gave you 1 bee!`);
+          // Add a bee to hive if there is space
+          const freeBee = bees.find(b=>b.inHive === false);
+          if(freeBee){
+            freeBee.inHive = true;
+            freeBee.mesh.visible = false;
+            document.getElementById("hiveCount").innerText = bees.filter(b=>b.inHive).length;
+          }
+          q.collected = 0;
+          q.goal = Math.floor(Math.random()*11)+5; // new random quest
+        }
+      }
+    } else if(!q.active){
+      document.getElementById("questText").innerText = "None";
+    } else {
+      // player left bear area
+      document.getElementById("questText").innerText = `Bring ${q.goal - q.collected} pollen to bear`;
+    }
+  });
 
   renderer.render(scene,camera);
 }
