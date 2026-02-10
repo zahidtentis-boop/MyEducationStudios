@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Mini Bee Swarm</title>
+<style>
+  body { font-family: sans-serif; text-align: center; background: #f0f8ff; }
+  #flower { width:50px; height:50px; background: pink; display:inline-block; margin:20px; cursor:pointer; border-radius:50%; }
+  #stats { margin-top:20px; font-size: 1.2em; }
+  button { margin:5px; padding:5px 10px; font-size:1em; }
+</style>
+</head>
+<body>
+<h1>Mini Bee Swarm</h1>
+<div id="flower"></div>
+<div id="stats">
+  Pollen: <span id="pollen">0</span> <br>
+  Bees: <span id="bees">1</span>
+</div>
+<button id="buyBee">Buy Bee (Cost: 10 Pollen)</button>
+
+<script>
+let pollen = 0;
+let bees = 1;
+
+const pollenDisplay = document.getElementById("pollen");
+const beesDisplay = document.getElementById("bees");
+const flower = document.getElementById("flower");
+const buyBeeBtn = document.getElementById("buyBee");
+
+function updateDisplay() {
+  pollenDisplay.textContent = pollen;
+  beesDisplay.textContent = bees;
+}
+
+flower.addEventListener("click", () => {
+  pollen += 1;
+  updateDisplay();
+});
+
+buyBeeBtn.addEventListener("click", () => {
+  if(pollen >= 10){
+    bees += 1;
+    pollen -= 10;
+    updateDisplay();
+  } else {
+    alert("Not enough pollen!");
+  }
+});
+
+// Auto collect pollen based on bees every second
+setInterval(() => {
+  pollen += bees;
+  updateDisplay();
+}, 1000);
+
+</script>
+</body>
+</html>
