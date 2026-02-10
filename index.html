@@ -1,25 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Bee Swarm Fan Game</title>
-  <style>
-    body { margin: 0; overflow: hidden; background: #87ceeb; }
-    #ui {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      color: white;
-      font-family: Arial;
-      font-size: 18px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Bee Swarm Fan Game</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #87ceeb; }
+  #ui {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-family: Arial;
+    font-size: 18px;
+  }
+  #ui div { margin-bottom: 5px; }
+</style>
 </head>
 <body>
-<div id="ui">🐝 Pollen: <span id="pollen">0</span></div>
+<div id="ui">
+  <div>🐝 Pollen: <span id="pollen">0</span></div>
+  <div>🏠 Hive Pollen: <span id="hivePollen">0</span></div>
+  <div>🟡 Bees in Hive: <span id="hiveCount">0</span>/3</div>
+  <div>Press H near hive to deposit a bee</div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158/build/three.min.js"></script>
-
 <script>
 /* ===== SETUP ===== */
 const scene = new THREE.Scene();
@@ -66,7 +71,7 @@ for(let i=0;i<3;i++){
   );
   bee.position.set(i-1,1,1);
   scene.add(bee);
-  bees.push(bee);
+  bees.push({ mesh: bee, inHive: false });
 }
 
 /* ===== FLOWERS ===== */
@@ -91,6 +96,7 @@ onkeydown = e => keys[e.key.toLowerCase()] = true;
 onkeyup = e => keys[e.key.toLowerCase()] = false;
 
 let pollen = 0;
+let hivePollen = 0;
 
 /* ===== CAMERA ===== */
 camera.position.set(0,6,8);
@@ -100,6 +106,7 @@ camera.lookAt(player.position);
 function animate(){
   requestAnimationFrame(animate);
 
+  // Player movement
   if(keys.w) player.position.z -= 0.2;
   if(keys.s) player.position.z += 0.2;
   if(keys.a) player.position.x -= 0.2;
@@ -108,14 +115,16 @@ function animate(){
   camera.position.x = player.position.x;
   camera.position.z = player.position.z + 8;
 
-  /* Bees follow player */
-  bees.forEach((bee,i)=>{
-    bee.position.x += (player.position.x - bee.position.x) * 0.05;
-    bee.position.z += (player.position.z - bee.position.z) * 0.05;
-    bee.position.y = 1 + Math.sin(Date.now()*0.005+i)*0.2;
+  // Bees follow player if not in hive
+  bees.forEach((bee)=>{
+    if(!bee.inHive){
+      bee.mesh.position.x += (player.position.x - bee.mesh.position.x) * 0.05;
+      bee.mesh.position.z += (player.position.z - bee.mesh.position.z) * 0.05;
+      bee.mesh.position.y = 1 + Math.sin(Date.now()*0.005)*0.2;
+    }
   });
 
-  /* Collect pollen */
+  // Collect pollen from flowers
   flowers.forEach((flower, i)=>{
     if(flower.position.distanceTo(player.position) < 1){
       scene.remove(flower);
@@ -124,6 +133,23 @@ function animate(){
       document.getElementById("pollen").innerText = pollen;
     }
   });
+
+  // Deposit bee into hive
+  if(keys.h && player.position.distanceTo(hive.position) < 2){
+    const beeToHive = bees.find(b=>!b.inHive);
+    if(beeToHive){
+      beeToHive.inHive = true;
+      beeToHive.mesh.visible = false;
+      document.getElementById("hiveCount").innerText = bees.filter(b=>b.inHive).length;
+    }
+  }
+
+  // Automatic pollen collection from hive
+  const hiveBees = bees.filter(b=>b.inHive).length;
+  if(hiveBees>0){
+    hivePollen += 0.01 * hiveBees; // each bee adds 0.01 pollen per frame
+    document.getElementById("hivePollen").innerText = Math.floor(hivePollen);
+  }
 
   renderer.render(scene,camera);
 }
