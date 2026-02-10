@@ -1,101 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>3D Bee Swarm Prototype</title>
-<style>
-body { margin:0; overflow:hidden; }
-canvas { display:block; }
-</style>
+  <meta charset="UTF-8">
+  <title>Bee Swarm Fan Game</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #87ceeb; }
+    #ui {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: Arial;
+      font-size: 18px;
+    }
+  </style>
 </head>
 <body>
+<div id="ui">🐝 Pollen: <span id="pollen">0</span></div>
 
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+<script src="https://cdn.jsdelivr.net/npm/three@0.158/build/three.min.js"></script>
 
-// === BASIC SCENE ===
+<script>
+/* ===== SETUP ===== */
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
-
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.set(10, 15, 20);
-
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Orbit Controls
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.1;
-controls.maxPolarAngle = Math.PI/2;
-
-// Lights
-const light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(10,20,10);
+/* ===== LIGHT ===== */
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(5,10,5);
 scene.add(light);
-scene.add(new THREE.AmbientLight(0x404040));
 
-// Ground
+/* ===== GROUND ===== */
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(50,50),
-  new THREE.MeshStandardMaterial({color:0x88cc88})
+  new THREE.PlaneGeometry(100,100),
+  new THREE.MeshStandardMaterial({ color: 0x3cb043 })
 );
-ground.rotation.x = -Math.PI/2;
+ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-// Player
-const player = new THREE.Group();
-const head = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0xffcc99}));
-head.position.y = 2.5; player.add(head);
-const body = new THREE.Mesh(new THREE.BoxGeometry(1,1.5,0.5), new THREE.MeshStandardMaterial({color:0x0000ff}));
-body.position.y = 1.25; player.add(body);
+/* ===== PLAYER ===== */
+const player = new THREE.Mesh(
+  new THREE.BoxGeometry(1,1,1),
+  new THREE.MeshStandardMaterial({ color: 0xffd700 })
+);
+player.position.y = 0.5;
 scene.add(player);
 
-// Hive
+/* ===== HIVE ===== */
 const hive = new THREE.Mesh(
-  new THREE.BoxGeometry(2,2,2),
-  new THREE.MeshStandardMaterial({color:0xffff00})
+  new THREE.CylinderGeometry(1,1,2,6),
+  new THREE.MeshStandardMaterial({ color: 0xffff99 })
 );
-hive.position.set(-10,1,0);
+hive.position.set(0,1,-10);
 scene.add(hive);
 
-// Flowers
-let flowers = [];
-for(let i=0;i<10;i++){
-  let f = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5,16,16),
-    new THREE.MeshStandardMaterial({color:0xff88cc})
+/* ===== BEES ===== */
+const bees = [];
+for(let i=0;i<3;i++){
+  const bee = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3),
+    new THREE.MeshStandardMaterial({ color: 0xffcc00 })
   );
-  f.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
-  scene.add(f);
-  flowers.push(f);
+  bee.position.set(i-1,1,1);
+  scene.add(bee);
+  bees.push(bee);
 }
 
-// Movement
-let keys = {};
-document.addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
-
-function movePlayer(){
-  const speed = 0.2;
-  if(keys['w']) player.position.z -= speed;
-  if(keys['s']) player.position.z += speed;
-  if(keys['a']) player.position.x -= speed;
-  if(keys['d']) player.position.x += speed;
+/* ===== FLOWERS ===== */
+const flowers = [];
+for(let i=0;i<20;i++){
+  const flower = new THREE.Mesh(
+    new THREE.ConeGeometry(0.3,1),
+    new THREE.MeshStandardMaterial({ color: 0xff69b4 })
+  );
+  flower.position.set(
+    Math.random()*40-20,
+    0.5,
+    Math.random()*40-20
+  );
+  scene.add(flower);
+  flowers.push(flower);
 }
 
-// Animate
+/* ===== CONTROLS ===== */
+const keys = {};
+onkeydown = e => keys[e.key.toLowerCase()] = true;
+onkeyup = e => keys[e.key.toLowerCase()] = false;
+
+let pollen = 0;
+
+/* ===== CAMERA ===== */
+camera.position.set(0,6,8);
+camera.lookAt(player.position);
+
+/* ===== GAME LOOP ===== */
 function animate(){
   requestAnimationFrame(animate);
-  movePlayer();
-  controls.update();
-  renderer.render(scene, camera);
+
+  if(keys.w) player.position.z -= 0.2;
+  if(keys.s) player.position.z += 0.2;
+  if(keys.a) player.position.x -= 0.2;
+  if(keys.d) player.position.x += 0.2;
+
+  camera.position.x = player.position.x;
+  camera.position.z = player.position.z + 8;
+
+  /* Bees follow player */
+  bees.forEach((bee,i)=>{
+    bee.position.x += (player.position.x - bee.position.x) * 0.05;
+    bee.position.z += (player.position.z - bee.position.z) * 0.05;
+    bee.position.y = 1 + Math.sin(Date.now()*0.005+i)*0.2;
+  });
+
+  /* Collect pollen */
+  flowers.forEach((flower, i)=>{
+    if(flower.position.distanceTo(player.position) < 1){
+      scene.remove(flower);
+      flowers.splice(i,1);
+      pollen += 1;
+      document.getElementById("pollen").innerText = pollen;
+    }
+  });
+
+  renderer.render(scene,camera);
 }
 
 animate();
-
 </script>
 </body>
 </html>
