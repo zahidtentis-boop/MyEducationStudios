@@ -49,6 +49,7 @@
         border: 2px solid #ccc;
         border-radius: 10px;
         background-color: #fff8dc;
+        position: relative;
     }
 
     canvas {
@@ -61,6 +62,17 @@
         padding: 20px;
         background-color: #ffcc00;
         margin-top: 20px;
+    }
+
+    #scoreBoard {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 18px;
+        color: #333;
+        background: rgba(255,255,255,0.7);
+        padding: 5px 10px;
+        border-radius: 5px;
     }
 </style>
 </head>
@@ -89,66 +101,118 @@ const gameContainer = document.getElementById('gameContainer');
 function loadGame(game) {
     gameContainer.innerHTML = ''; // Clear previous content
     if(game === 'bee') {
-        // Create canvas for Bee Swarm
+        // Create canvas
         const canvas = document.createElement('canvas');
         canvas.width = 600;
         canvas.height = 400;
         gameContainer.appendChild(canvas);
-        startBeeSwarm(canvas);
+
+        // Scoreboard
+        const scoreBoard = document.createElement('div');
+        scoreBoard.id = 'scoreBoard';
+        scoreBoard.innerText = 'Pollen: 0';
+        gameContainer.appendChild(scoreBoard);
+
+        startBeeSwarm(canvas, scoreBoard);
     } else if(game === 'other') {
         gameContainer.innerHTML = '<p>Other game coming soon!</p>';
     }
 }
 
-// Mini Bee Swarm Simulator
-function startBeeSwarm(canvas) {
+// Upgraded Bee Swarm Simulator
+function startBeeSwarm(canvas, scoreBoard) {
     const ctx = canvas.getContext('2d');
-    let bee = { x: 300, y: 200, size: 20, color: 'yellow' };
-    let flowers = [];
-    let score = 0;
 
-    for(let i=0; i<10; i++){
+    // Player bees
+    let bees = [
+        { x: 300, y: 200, size: 15, color: 'yellow', speed: 5 }
+    ];
+
+    // Flowers with types
+    const flowerTypes = [
+        { color: 'pink', points: 1 },
+        { color: 'red', points: 2 },
+        { color: 'blue', points: 3 }
+    ];
+    let flowers = [];
+    for(let i=0;i<10;i++){
+        let type = flowerTypes[Math.floor(Math.random()*flowerTypes.length)];
         flowers.push({
-            x: Math.random() * (canvas.width - 20),
-            y: Math.random() * (canvas.height - 20),
+            x: Math.random() * (canvas.width-20),
+            y: Math.random() * (canvas.height-20),
             size: 15,
-            color: 'pink'
+            color: type.color,
+            points: type.points
         });
     }
 
+    // Collectable pollen boosts
+    let items = [];
+
+    let score = 0;
+
+    // Keyboard controls
     let keys = {};
     document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
     document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-    function update() {
-        if(keys['w']) bee.y -= 5;
-        if(keys['s']) bee.y += 5;
-        if(keys['a']) bee.x -= 5;
-        if(keys['d']) bee.x += 5;
-
-        bee.x = Math.max(0, Math.min(canvas.width - bee.size, bee.x));
-        bee.y = Math.max(0, Math.min(canvas.height - bee.size, bee.y));
-
-        flowers.forEach(flower => {
-            const dx = bee.x - flower.x;
-            const dy = bee.y - flower.y;
-            const distance = Math.sqrt(dx*dx + dy*dy);
-            if(distance < (bee.size + flower.size)/2) {
-                score += 1;
-                flower.x = Math.random() * (canvas.width - flower.size);
-                flower.y = Math.random() * (canvas.height - flower.size);
-            }
+    function spawnItem() {
+        items.push({
+            x: Math.random()*(canvas.width-20),
+            y: Math.random()*(canvas.height-20),
+            size: 10,
+            color: 'orange',
+            points: 5
         });
+    }
+    setInterval(spawnItem, 10000); // spawn every 10 sec
+
+    function update() {
+        bees.forEach(bee => {
+            if(keys['w']) bee.y -= bee.speed;
+            if(keys['s']) bee.y += bee.speed;
+            if(keys['a']) bee.x -= bee.speed;
+            if(keys['d']) bee.x += bee.speed;
+
+            bee.x = Math.max(0, Math.min(canvas.width - bee.size, bee.x));
+            bee.y = Math.max(0, Math.min(canvas.height - bee.size, bee.y));
+
+            // Collect flowers
+            flowers.forEach(flower => {
+                const dx = bee.x - flower.x;
+                const dy = bee.y - flower.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                if(distance < (bee.size + flower.size)/2) {
+                    score += flower.points;
+                    flower.x = Math.random() * (canvas.width - flower.size);
+                    flower.y = Math.random() * (canvas.height - flower.size);
+                    flower.points = flowerTypes[Math.floor(Math.random()*flowerTypes.length)].points;
+                    flower.color = flowerTypes[Math.floor(Math.random()*flowerTypes.length)].color;
+                }
+            });
+
+            // Collect items
+            items.forEach((item, i) => {
+                const dx = bee.x - item.x;
+                const dy = bee.y - item.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                if(distance < (bee.size + item.size)/2) {
+                    score += item.points;
+                    items.splice(i,1);
+                }
+            });
+        });
+
+        // Upgrade bees automatically at score milestones
+        if(score >= 10*bees.length && bees.length < 5) {
+            bees.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: 15, color: 'yellow', speed: 5 });
+        }
+
+        scoreBoard.innerText = 'Pollen: ' + score;
     }
 
     function draw() {
         ctx.clearRect(0,0,canvas.width,canvas.height);
-
-        // Draw bee
-        ctx.fillStyle = bee.color;
-        ctx.beginPath();
-        ctx.arc(bee.x, bee.y, bee.size, 0, Math.PI*2);
-        ctx.fill();
 
         // Draw flowers
         flowers.forEach(f => {
@@ -158,10 +222,21 @@ function startBeeSwarm(canvas) {
             ctx.fill();
         });
 
-        // Draw score
-        ctx.fillStyle = '#333';
-        ctx.font = '20px Arial';
-        ctx.fillText('Pollen collected: ' + score, 10, 30);
+        // Draw items
+        items.forEach(item => {
+            ctx.fillStyle = item.color;
+            ctx.beginPath();
+            ctx.arc(item.x, item.y, item.size, 0, Math.PI*2);
+            ctx.fill();
+        });
+
+        // Draw bees
+        bees.forEach(bee => {
+            ctx.fillStyle = bee.color;
+            ctx.beginPath();
+            ctx.arc(bee.x, bee.y, bee.size, 0, Math.PI*2);
+            ctx.fill();
+        });
     }
 
     function gameLoop() {
