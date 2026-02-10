@@ -7,10 +7,9 @@
 body { margin:0; overflow:hidden; font-family:sans-serif; }
 canvas { display:block; }
 
-/* Inventory / Hive / Shop UI */
+/* UI */
 #inventoryBox, #itemsBox, #questBox, #shopBox {
-  position: absolute; padding: 10px; background: rgba(255,255,255,0.85); border: 2px solid #000;
-  font-family: sans-serif;
+  position:absolute; padding:10px; background:rgba(255,255,255,0.85); border:2px solid #000;
 }
 #inventoryBox { top:10px; right:10px; }
 #itemsBox { top:10px; left:10px; width:160px; }
@@ -23,12 +22,10 @@ canvas { display:block; }
 </head>
 <body>
 
-<!-- Inventory Items -->
+<!-- Items Inventory -->
 <div id="itemsBox">
   <h3>Items</h3>
-  <div id="inventoryItems">
-    <div class="item" draggable="true" id="basicEgg">🟡 Basic Egg</div>
-  </div>
+  <div id="inventoryItems"></div>
   <div style="margin-top:10px;">
     <strong>Hive Slot:</strong>
     <div id="hiveSlot">Drop egg here</div>
@@ -47,7 +44,7 @@ canvas { display:block; }
   <button onclick="closeShop()">Close Shop</button>
 </div>
 
-<!-- Inventory / Hive Display -->
+<!-- Inventory -->
 <div id="inventoryBox">
   Inventory: <span id="inventory">0</span> | Hive: <span id="hivePollen">0</span>
 </div>
@@ -55,7 +52,7 @@ canvas { display:block; }
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
 
-/* ==== THREE.JS SETUP ==== */
+/* ====== THREE.JS SETUP ====== */
 let scene = new THREE.Scene();
 scene.background = new THREE.Color(0xa0d0ff);
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -69,7 +66,7 @@ light.position.set(10,20,10);
 scene.add(light);
 scene.add(new THREE.AmbientLight(0x404040));
 
-/* ==== GROUND ==== */
+/* ====== GROUND ====== */
 let ground = new THREE.Mesh(
   new THREE.PlaneGeometry(50,50),
   new THREE.MeshStandardMaterial({color:0x88cc88})
@@ -77,7 +74,7 @@ let ground = new THREE.Mesh(
 ground.rotation.x = -Math.PI/2;
 scene.add(ground);
 
-/* ==== PLAYER ==== */
+/* ====== PLAYER ====== */
 let player = new THREE.Group();
 let head = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0xffcc99}));
 head.position.y = 2.5; player.add(head);
@@ -87,12 +84,12 @@ let hair = new THREE.Mesh(new THREE.BoxGeometry(1.1,0.4,1.1), new THREE.MeshStan
 hair.position.y = 3; player.add(hair);
 scene.add(player);
 
-/* ==== HIVE ==== */
+/* ====== HIVE ====== */
 let hive = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color:0xffff00}));
 hive.position.set(-15,1,0);
 scene.add(hive);
 
-/* ==== FLOWERS ==== */
+/* ====== FLOWERS ====== */
 let flowers = [];
 for(let i=0;i<10;i++){
   let f = new THREE.Mesh(new THREE.SphereGeometry(0.5,16,16), new THREE.MeshStandardMaterial({color:0xff88cc}));
@@ -101,27 +98,27 @@ for(let i=0;i<10;i++){
   flowers.push(f);
 }
 
-/* ==== BEARS AND QUESTS ==== */
+/* ====== BEARS & QUESTS ====== */
 let bears = [], quests = [];
 for(let i=0;i<3;i++){
   let b = new THREE.Mesh(new THREE.BoxGeometry(1,1.5,1), new THREE.MeshStandardMaterial({color:0x885522}));
   b.position.set(Math.random()*20-10,0.75,Math.random()*20-10);
   scene.add(b); bears.push(b);
-  quests.push({bearIndex:i,target:5 + i*5,completed:false});
+  quests.push({bearIndex:i,target:5+i*5,completed:false});
 }
 
-/* ==== PLAYER STATS ==== */
+/* ====== PLAYER STATS ====== */
 let inventory = 0, hivePollen = 0, speed = 0.2, autoPollen = 0;
 let keys = {};
 document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
 document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-/* ==== UI ELEMENTS ==== */
+/* ====== UI ELEMENTS ====== */
 const questBox = document.getElementById("questBox");
 const shopBox = document.getElementById("shopBox");
 const inventoryBox = document.getElementById("inventoryBox");
 
-/* ==== SHOP FUNCTIONS ==== */
+/* ====== SHOP ====== */
 function openShop(){ 
   shopBox.style.display="block"; 
   document.getElementById("shopPollen").innerText = inventory; 
@@ -134,80 +131,89 @@ function buyGear(type){
   document.getElementById("shopPollen").innerText = inventory;
 }
 
-/* ==== BEES ==== */
-let bees = [], beeCount = 0; // start with no bees
-
-// Drag & drop egg to spawn bees
-const basicEgg = document.getElementById("basicEgg");
-const hiveSlot = document.getElementById("hiveSlot");
+/* ====== BEES & ITEMS ====== */
+let bees = [];
 let itemsInventory = ["Basic Egg"];
+const inventoryItemsDiv = document.getElementById("inventoryItems");
+const hiveSlot = document.getElementById("hiveSlot");
 
-basicEgg.addEventListener("dragstart", (e)=>{
-  e.dataTransfer.setData("text/plain","Basic Egg");
-});
+// Reset Items UI
+function resetItems(){
+  inventoryItemsDiv.innerHTML = '';
+  itemsInventory.forEach(i=>{
+    if(i==="Basic Egg"){
+      let egg = document.createElement("div");
+      egg.className = "item";
+      egg.id = "basicEgg";
+      egg.draggable = true;
+      egg.innerText = "🟡 Basic Egg";
+      inventoryItemsDiv.appendChild(egg);
+      egg.addEventListener("dragstart", e=>{
+        e.dataTransfer.setData("text/plain","Basic Egg");
+      });
+    }
+  });
+}
+resetItems();
 
-hiveSlot.addEventListener("dragover", (e)=>{ e.preventDefault(); });
-hiveSlot.addEventListener("drop", (e)=>{
+// Hive Slot Drag & Drop
+hiveSlot.addEventListener("dragover", e=>{ e.preventDefault(); });
+hiveSlot.addEventListener("drop", e=>{
   e.preventDefault();
   let item = e.dataTransfer.getData("text/plain");
   if(item === "Basic Egg"){
-    basicEgg.remove();
-    itemsInventory = itemsInventory.filter(i=>i!=="Basic Egg");
+    itemsInventory = itemsInventory.filter(x=>x!=="Basic Egg");
+    resetItems();
     spawnBee();
-    beeCount++;
     hiveSlot.innerText = "Egg hatched!";
-    setTimeout(()=>{ hiveSlot.innerText = "Drop egg here"; }, 2000);
+    setTimeout(()=>{ hiveSlot.innerText = "Drop egg here"; },2000);
   }
 });
 
-// Function to spawn a bee
+// Spawn Bee
 function spawnBee(){
   let bee = new THREE.Mesh(
     new THREE.SphereGeometry(0.2,8,8),
     new THREE.MeshStandardMaterial({color:0xffff00})
   );
-  bee.position.set(player.position.x + Math.random()*2-1, 1, player.position.z + Math.random()*2-1);
+  bee.position.set(player.position.x + Math.random()*2-1,1,player.position.z + Math.random()*2-1);
   bee.targetFlower = null;
   scene.add(bee);
   bees.push(bee);
 }
 
-/* ==== HELPER FOR NEAREST FLOWER ==== */
-function getNearestFlower(bee) {
-  let nearest = null;
-  let minDist = Infinity;
+// Nearest flower
+function getNearestFlower(bee){
+  let nearest = null, minDist = Infinity;
   flowers.forEach(f=>{
     let d = bee.position.distanceTo(f.position);
-    if(d < minDist){ minDist = d; nearest = f; }
+    if(d<minDist){ minDist=d; nearest=f; }
   });
   return nearest;
 }
 
-/* ==== UPDATE BEES ==== */
+// Update bees
 function updateBees(){
-  bees.forEach(bee=>{
+  bees.forEach((bee,i)=>{
     if(!bee.targetFlower) bee.targetFlower = getNearestFlower(bee);
     if(bee.targetFlower){
-      let dir = new THREE.Vector3().subVectors(bee.targetFlower.position, bee.position);
-      if(dir.length() > 0.1){
-        dir.normalize();
-        bee.position.add(dir.multiplyScalar(0.1));
-      } else {
-        // Collect pollen
-        inventory += 1;
+      let dir = new THREE.Vector3().subVectors(bee.targetFlower.position,bee.position);
+      if(dir.length()>0.1){ dir.normalize(); bee.position.add(dir.multiplyScalar(0.1)); }
+      else{
+        inventory+=1;
         bee.targetFlower.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
         bee.targetFlower = null;
       }
-      bee.position.y = 1 + Math.sin(Date.now()/200 + bees.indexOf(bee)) * 0.2;
+      bee.position.y = 1+Math.sin(Date.now()/200+i)*0.2;
     }
   });
 }
 
-/* ==== ANIMATE LOOP ==== */
+/* ====== ANIMATE LOOP ====== */
 function animate(){
   requestAnimationFrame(animate);
 
-  // WASD movement
+  // Movement
   if(keys['w']) player.position.z -= speed;
   if(keys['s']) player.position.z += speed;
   if(keys['a']) player.position.x -= speed;
@@ -215,15 +221,15 @@ function animate(){
 
   // Collect flowers
   flowers.forEach(f=>{
-    if(player.position.distanceTo(f.position) < 1){
+    if(player.position.distanceTo(f.position)<1){
       inventory++;
       f.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
     }
   });
 
-  // Bears
+  // Bears quests
   bears.forEach((b,i)=>{
-    if(player.position.distanceTo(b.position) < 1.5 && !quests[i].completed){
+    if(player.position.distanceTo(b.position)<1.5 && !quests[i].completed){
       questBox.style.display="block";
       questBox.innerHTML = `Bear ${i+1} Quest: Collect ${quests[i].target} pollen. Inventory: ${inventory} <br> Press 'E' for shop`;
     }
@@ -231,37 +237,34 @@ function animate(){
 
   if(keys['e']) openShop();
 
-  // Quest completion
+  // Complete quests
   quests.forEach(q=>{
-    if(!q.completed && inventory >= q.target){
-      inventory -= q.target;
-      hivePollen += q.target;
-      q.completed = true;
+    if(!q.completed && inventory>=q.target){
+      inventory-=q.target; hivePollen+=q.target; q.completed=true;
       questBox.innerHTML = `Quest complete! Deposited ${q.target} pollen to hive.`;
-      setTimeout(()=>{questBox.style.display="none";},2000);
+      setTimeout(()=>{ questBox.style.display="none"; },2000);
     }
   });
 
   // Auto pollen
-  inventory += autoPollen*0.01;
+  inventory+=autoPollen*0.01;
 
   // Deposit at hive
-  if(player.position.distanceTo(hive.position) < 2 && inventory>0){
-    hivePollen += inventory;
-    inventory = 0;
+  if(player.position.distanceTo(hive.position)<2 && inventory>0){
+    hivePollen+=inventory; inventory=0;
   }
 
   // Update bees
   updateBees();
 
-  // Camera follows player
-  camera.position.x = player.position.x + 10;
-  camera.position.z = player.position.z + 10;
+  // Camera
+  camera.position.x = player.position.x+10;
+  camera.position.z = player.position.z+10;
   camera.lookAt(player.position);
 
-  renderer.render(scene, camera);
+  renderer.render(scene,camera);
 
-  // Update UI
+  // UI
   document.getElementById("inventory").innerText = Math.floor(inventory);
   document.getElementById("hivePollen").innerText = Math.floor(hivePollen);
 }
