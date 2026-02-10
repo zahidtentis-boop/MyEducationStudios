@@ -1,101 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>3D Bee Swarm Prototype</title>
-<style>
-body { margin:0; overflow:hidden; }
-canvas { display:block; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Game Hub</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #ffcc00;
+            padding: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            color: #333;
+        }
+
+        nav {
+            margin: 20px 0;
+        }
+
+        nav button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            background-color: #ff9900;
+            color: white;
+            border-radius: 5px;
+        }
+
+        nav button:hover {
+            background-color: #e68a00;
+        }
+
+        iframe {
+            width: 80%;
+            height: 600px;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            margin-bottom: 40px;
+        }
+
+        .footer {
+            padding: 20px;
+            background-color: #ffcc00;
+        }
+    </style>
 </head>
 <body>
 
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+<header>
+    <h1>School Game Hub</h1>
+</header>
 
-// === BASIC SCENE ===
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+<nav>
+    <button onclick="loadGame('bee')">Bee Swarm Simulator</button>
+    <button onclick="loadGame('other')">Other Game</button>
+</nav>
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.set(10, 15, 20);
+<div id="gameContainer">
+    <iframe id="gameFrame" src="" allowfullscreen></iframe>
+</div>
 
-const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+<div class="footer">
+    &copy; 2026 Game Hub
+</div>
 
-// Orbit Controls
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.1;
-controls.maxPolarAngle = Math.PI/2;
-
-// Lights
-const light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(10,20,10);
-scene.add(light);
-scene.add(new THREE.AmbientLight(0x404040));
-
-// Ground
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(50,50),
-  new THREE.MeshStandardMaterial({color:0x88cc88})
-);
-ground.rotation.x = -Math.PI/2;
-scene.add(ground);
-
-// Player
-const player = new THREE.Group();
-const head = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color:0xffcc99}));
-head.position.y = 2.5; player.add(head);
-const body = new THREE.Mesh(new THREE.BoxGeometry(1,1.5,0.5), new THREE.MeshStandardMaterial({color:0x0000ff}));
-body.position.y = 1.25; player.add(body);
-scene.add(player);
-
-// Hive
-const hive = new THREE.Mesh(
-  new THREE.BoxGeometry(2,2,2),
-  new THREE.MeshStandardMaterial({color:0xffff00})
-);
-hive.position.set(-10,1,0);
-scene.add(hive);
-
-// Flowers
-let flowers = [];
-for(let i=0;i<10;i++){
-  let f = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5,16,16),
-    new THREE.MeshStandardMaterial({color:0xff88cc})
-  );
-  f.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
-  scene.add(f);
-  flowers.push(f);
-}
-
-// Movement
-let keys = {};
-document.addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
-
-function movePlayer(){
-  const speed = 0.2;
-  if(keys['w']) player.position.z -= speed;
-  if(keys['s']) player.position.z += speed;
-  if(keys['a']) player.position.x -= speed;
-  if(keys['d']) player.position.x += speed;
-}
-
-// Animate
-function animate(){
-  requestAnimationFrame(animate);
-  movePlayer();
-  controls.update();
-  renderer.render(scene, camera);
-}
-
-animate();
-
+<script>
+    function loadGame(game) {
+        const frame = document.getElementById('gameFrame');
+        if (game === 'bee') {
+            // Roblox Bee Swarm Simulator embed
+            frame.src = 'https://www.roblox.com/games/1537690962/Bee-Swarm-Simulator'; 
+        } else if (game === 'other') {
+            // Example: another game URL
+            frame.src = 'https://www.coolmathgames.com/0-fireboy-and-watergirl-1';
+        }
+    }
 </script>
+
 </body>
 </html>
