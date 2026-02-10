@@ -2,24 +2,32 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Mini 3D Bee Swarm with Bears</title>
+<title>Mini 3D Bee Swarm with Shop</title>
 <style>
-  body { margin:0; overflow:hidden; }
+  body { margin:0; overflow:hidden; font-family:sans-serif; }
   canvas { display:block; }
-  #questBox {
+  #questBox, #shopBox {
     position: absolute;
     top: 40px;
     left: 10px;
     padding: 10px;
-    background: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.85);
     border: 2px solid #000;
-    font-family: sans-serif;
     display: none;
   }
+  #shopBox button { margin-top:5px; padding:5px; }
 </style>
 </head>
 <body>
 <div id="questBox"></div>
+<div id="shopBox">
+  <h3>Shop</h3>
+  <div>Pollen: <span id="shopPollen">0</span></div>
+  <button onclick="buyGear('speed')">Buy Speed Boost (10 Pollen)</button><br>
+  <button onclick="buyGear('autoPollen')">Buy Auto Pollen (15 Pollen)</button>
+  <button onclick="closeShop()">Close Shop</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
 let scene = new THREE.Scene();
@@ -37,7 +45,6 @@ document.body.appendChild(renderer.domElement);
 let light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(10,20,10);
 scene.add(light);
-
 let ambient = new THREE.AmbientLight(0x404040);
 scene.add(ambient);
 
@@ -50,21 +57,18 @@ scene.add(ground);
 
 // Player (Roblox-style)
 let player = new THREE.Group();
-
 // Head
 let headGeo = new THREE.BoxGeometry(1,1,1);
 let headMat = new THREE.MeshStandardMaterial({color:0xffcc99});
 let head = new THREE.Mesh(headGeo, headMat);
 head.position.y = 2.5;
 player.add(head);
-
 // Body
 let bodyGeo = new THREE.BoxGeometry(1,1.5,0.5);
 let bodyMat = new THREE.MeshStandardMaterial({color:0x0000ff});
 let body = new THREE.Mesh(bodyGeo, bodyMat);
 body.position.y = 1.25;
 player.add(body);
-
 // Bacon Hair
 let hairGeo = new THREE.BoxGeometry(1.1,0.4,1.1);
 let hairMat = new THREE.MeshStandardMaterial({color:0xff6633});
@@ -88,11 +92,12 @@ for(let i=0;i<10;i++){
 
 let pollen = 0;
 let keys = {};
+let speed = 0.2;
+let autoPollen = 0;
 
-// Bears (NPCs that give quests)
+// Bears
 let bears = [];
 let quests = [];
-
 for(let i=0;i<3;i++){
   let bGeo = new THREE.BoxGeometry(1,1.5,1);
   let bMat = new THREE.MeshStandardMaterial({color:0x885522});
@@ -100,26 +105,46 @@ for(let i=0;i<3;i++){
   b.position.set(Math.random()*20-10,0.75,Math.random()*20-10);
   scene.add(b);
   bears.push(b);
-
-  // Each bear has a quest: collect X pollen
   quests.push({bearIndex: i, target: 5 + i*5, completed: false});
 }
 
 // Controls
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
+document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
 const questBox = document.getElementById("questBox");
+const shopBox = document.getElementById("shopBox");
 let currentQuest = null;
+
+// Shop functions
+function openShop(){
+  shopBox.style.display = "block";
+  document.getElementById("shopPollen").innerText = pollen;
+}
+function closeShop(){
+  shopBox.style.display = "none";
+}
+function buyGear(type){
+  if(type==='speed' && pollen>=10){
+    speed += 0.1;
+    pollen -= 10;
+  } else if(type==='autoPollen' && pollen>=15){
+    autoPollen += 1;
+    pollen -= 15;
+  } else {
+    alert("Not enough pollen!");
+  }
+  document.getElementById("shopPollen").innerText = pollen;
+}
 
 function animate(){
   requestAnimationFrame(animate);
 
-  // Player movement
-  if(keys["ArrowUp"]) player.position.z -= 0.2;
-  if(keys["ArrowDown"]) player.position.z += 0.2;
-  if(keys["ArrowLeft"]) player.position.x -= 0.2;
-  if(keys["ArrowRight"]) player.position.x += 0.2;
+  // Player movement WASD
+  if(keys['w']) player.position.z -= speed;
+  if(keys['s']) player.position.z += speed;
+  if(keys['a']) player.position.x -= speed;
+  if(keys['d']) player.position.x += speed;
 
   // Collision with flowers
   flowers.forEach(f=>{
@@ -134,9 +159,12 @@ function animate(){
     if(player.position.distanceTo(b.position) < 1.5 && !quests[i].completed){
       currentQuest = quests[i];
       questBox.style.display = "block";
-      questBox.innerHTML = `Bear ${i+1} Quest: Collect ${currentQuest.target} pollen. You have ${pollen}.`;
+      questBox.innerHTML = `Bear ${i+1} Quest: Collect ${currentQuest.target} pollen. You have ${pollen}. <br> Press 'E' to open shop.`;
     }
   });
+
+  // Open shop if E pressed
+  if(keys['e']) openShop();
 
   // Check quest completion
   if(currentQuest && pollen >= currentQuest.target){
@@ -144,6 +172,9 @@ function animate(){
     questBox.innerHTML = `Quest Complete! Bear ${currentQuest.bearIndex+1} thanks you!`;
     setTimeout(()=>{questBox.style.display = "none"; currentQuest = null;}, 2000);
   }
+
+  // Auto pollen from gear
+  pollen += autoPollen * 0.01;
 
   // Camera follows player
   camera.position.x = player.position.x + 10;
@@ -162,7 +193,7 @@ function animate(){
   div.style.color = "black";
   div.style.fontSize = "20px";
   div.style.fontFamily = "sans-serif";
-  div.innerHTML = "Pollen: " + pollen;
+  div.innerHTML = "Pollen: " + Math.floor(pollen);
   document.body.appendChild(div);
 }
 
