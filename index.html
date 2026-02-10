@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Mini 3D Bee Swarm</title>
+<title>3D Bee Swarm with Hive</title>
 <style>
 body { margin:0; overflow:hidden; font-family:sans-serif; }
 canvas { display:block; }
 
-/* UI */
 #inventoryBox, #itemsBox, #questBox, #shopBox {
   position:absolute; padding:10px; background:rgba(255,255,255,0.85); border:2px solid #000;
 }
@@ -16,26 +15,20 @@ canvas { display:block; }
 #questBox { top:200px; left:10px; display:none; }
 #shopBox { top:300px; left:10px; display:none; }
 #shopBox button { margin-top:5px; padding:5px; }
-#hiveSlot { width:100%; height:40px; border:2px dashed #888; margin-top:5px; text-align:center; line-height:40px; }
-.item { cursor: grab; margin:3px 0; padding:2px; border:1px solid #666; text-align:center; }
+.item { cursor:pointer; margin:3px 0; padding:2px; border:1px solid #666; text-align:center; }
 </style>
 </head>
 <body>
 
-<!-- Items Inventory -->
+<!-- Inventory UI -->
 <div id="itemsBox">
   <h3>Items</h3>
   <div id="inventoryItems"></div>
-  <div style="margin-top:10px;">
-    <strong>Hive Slot:</strong>
-    <div id="hiveSlot">Drop egg here</div>
-  </div>
+  <p>Press <strong>Q</strong> to pick up egg</p>
 </div>
 
-<!-- Quest Box -->
 <div id="questBox"></div>
 
-<!-- Shop -->
 <div id="shopBox">
   <h3>Shop</h3>
   <div>Pollen in inventory: <span id="shopPollen">0</span></div>
@@ -44,7 +37,6 @@ canvas { display:block; }
   <button onclick="closeShop()">Close Shop</button>
 </div>
 
-<!-- Inventory -->
 <div id="inventoryBox">
   Inventory: <span id="inventory">0</span> | Hive: <span id="hivePollen">0</span>
 </div>
@@ -58,9 +50,11 @@ scene.background = new THREE.Color(0xa0d0ff);
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.set(0,20,20);
 camera.lookAt(0,0,0);
+
 let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+
 let light = new THREE.DirectionalLight(0xffffff,1);
 light.position.set(10,20,10);
 scene.add(light);
@@ -88,6 +82,8 @@ scene.add(player);
 let hive = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshStandardMaterial({color:0xffff00}));
 hive.position.set(-15,1,0);
 scene.add(hive);
+const hiveSlotPosition = new THREE.Vector3(hive.position.x, hive.position.y + 1, hive.position.z);
+const hiveSlotRadius = 1.5;
 
 /* ====== FLOWERS ====== */
 let flowers = [];
@@ -135,7 +131,7 @@ function buyGear(type){
 let bees = [];
 let itemsInventory = ["Basic Egg"];
 const inventoryItemsDiv = document.getElementById("inventoryItems");
-const hiveSlot = document.getElementById("hiveSlot");
+let carriedEgg = null;
 
 // Reset Items UI
 function resetItems(){
@@ -144,29 +140,26 @@ function resetItems(){
     if(i==="Basic Egg"){
       let egg = document.createElement("div");
       egg.className = "item";
-      egg.id = "basicEgg";
-      egg.draggable = true;
       egg.innerText = "🟡 Basic Egg";
       inventoryItemsDiv.appendChild(egg);
-      egg.addEventListener("dragstart", e=>{
-        e.dataTransfer.setData("text/plain","Basic Egg");
-      });
     }
   });
 }
 resetItems();
 
-// Hive Slot Drag & Drop
-hiveSlot.addEventListener("dragover", e=>{ e.preventDefault(); });
-hiveSlot.addEventListener("drop", e=>{
-  e.preventDefault();
-  let item = e.dataTransfer.getData("text/plain");
-  if(item === "Basic Egg"){
+// Pick up egg
+document.addEventListener("keydown", e=>{
+  if(e.key.toLowerCase() === "q" && itemsInventory.includes("Basic Egg") && !carriedEgg){
     itemsInventory = itemsInventory.filter(x=>x!=="Basic Egg");
     resetItems();
-    spawnBee();
-    hiveSlot.innerText = "Egg hatched!";
-    setTimeout(()=>{ hiveSlot.innerText = "Drop egg here"; },2000);
+
+    // Create 3D egg above player
+    carriedEgg = new THREE.Mesh(
+      new THREE.SphereGeometry(0.3,8,8),
+      new THREE.MeshStandardMaterial({color:0xffff00})
+    );
+    carriedEgg.position.set(player.position.x, player.position.y + 2, player.position.z);
+    scene.add(carriedEgg);
   }
 });
 
@@ -176,7 +169,7 @@ function spawnBee(){
     new THREE.SphereGeometry(0.2,8,8),
     new THREE.MeshStandardMaterial({color:0xffff00})
   );
-  bee.position.set(player.position.x + Math.random()*2-1,1,player.position.z + Math.random()*2-1);
+  bee.position.set(player.position.x + Math.random()*2-1, 1, player.position.z + Math.random()*2-1);
   bee.targetFlower = null;
   scene.add(bee);
   bees.push(bee);
@@ -184,9 +177,9 @@ function spawnBee(){
 
 // Nearest flower
 function getNearestFlower(bee){
-  let nearest = null, minDist = Infinity;
+  let nearest=null, minDist=Infinity;
   flowers.forEach(f=>{
-    let d = bee.position.distanceTo(f.position);
+    let d=bee.position.distanceTo(f.position);
     if(d<minDist){ minDist=d; nearest=f; }
   });
   return nearest;
@@ -207,6 +200,19 @@ function updateBees(){
       bee.position.y = 1+Math.sin(Date.now()/200+i)*0.2;
     }
   });
+}
+
+// Update carried egg
+function updateCarriedEgg(){
+  if(carriedEgg){
+    carriedEgg.position.set(player.position.x, player.position.y + 2, player.position.z);
+    if(carriedEgg.position.distanceTo(hiveSlotPosition) < hiveSlotRadius){
+      spawnBee();
+      scene.remove(carriedEgg);
+      carriedEgg = null;
+      console.log("Egg hatched at hive!");
+    }
+  }
 }
 
 /* ====== ANIMATE LOOP ====== */
@@ -256,6 +262,9 @@ function animate(){
 
   // Update bees
   updateBees();
+
+  // Update egg
+  updateCarriedEgg();
 
   // Camera
   camera.position.x = player.position.x+10;
