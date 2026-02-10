@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>3D Mini Bee Swarm</title>
+<title>3D Bee Swarm with Bacon Hair</title>
 <style>
-  body { margin: 0; overflow: hidden; }
-  canvas { display: block; }
+  body { margin:0; overflow:hidden; }
+  canvas { display:block; }
 </style>
 </head>
 <body>
@@ -22,10 +22,13 @@ let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Light
+// Lights
 let light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(10,20,10);
 scene.add(light);
+
+let ambient = new THREE.AmbientLight(0x404040);
+scene.add(ambient);
 
 // Ground
 let groundGeo = new THREE.PlaneGeometry(50,50);
@@ -34,17 +37,37 @@ let ground = new THREE.Mesh(groundGeo, groundMat);
 ground.rotation.x = -Math.PI/2;
 scene.add(ground);
 
-// Player
-let playerGeo = new THREE.BoxGeometry(1,1,1);
-let playerMat = new THREE.MeshStandardMaterial({color:0xffff00});
-let player = new THREE.Mesh(playerGeo, playerMat);
-player.position.y = 0.5;
+// Player (Roblox-style)
+let player = new THREE.Group();
+
+// Head
+let headGeo = new THREE.BoxGeometry(1,1,1);
+let headMat = new THREE.MeshStandardMaterial({color:0xffcc99});
+let head = new THREE.Mesh(headGeo, headMat);
+head.position.y = 2.5;
+player.add(head);
+
+// Body
+let bodyGeo = new THREE.BoxGeometry(1,1.5,0.5);
+let bodyMat = new THREE.MeshStandardMaterial({color:0x0000ff});
+let body = new THREE.Mesh(bodyGeo, bodyMat);
+body.position.y = 1.25;
+player.add(body);
+
+// Bacon Hair
+let hairGeo = new THREE.BoxGeometry(1.1,0.4,1.1);
+let hairMat = new THREE.MeshStandardMaterial({color:0xff6633});
+let hair = new THREE.Mesh(hairGeo, hairMat);
+hair.position.y = 3;
+player.add(hair);
+
+player.position.y = 0;
 scene.add(player);
 
 // Flowers
 let flowers = [];
 for(let i=0;i<10;i++){
-  let fGeo = new THREE.SphereGeometry(0.5, 16,16);
+  let fGeo = new THREE.SphereGeometry(0.5,16,16);
   let fMat = new THREE.MeshStandardMaterial({color:0xff88cc});
   let f = new THREE.Mesh(fGeo, fMat);
   f.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
@@ -68,7 +91,7 @@ function animate(){
   if(keys["ArrowLeft"]) player.position.x -= 0.2;
   if(keys["ArrowRight"]) player.position.x += 0.2;
 
-  // Check collision with flowers
+  // Collision with flowers
   flowers.forEach(f=>{
     if(player.position.distanceTo(f.position) < 1){
       pollen++;
@@ -76,7 +99,7 @@ function animate(){
     }
   });
 
-  // Update camera to follow player
+  // Camera follows player
   camera.position.x = player.position.x + 10;
   camera.position.z = player.position.z + 10;
   camera.lookAt(player.position);
