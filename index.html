@@ -2,93 +2,135 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Bee Swarm Simulator (Pseudo 3D)</title>
+<title>3D Bee Swarm Prototype</title>
 <style>
-    body { margin:0; background:#87ceeb; overflow:hidden; font-family:Arial; }
+    body { margin:0; overflow:hidden; }
     #scoreBoard { position:absolute; top:10px; left:10px; font-size:24px; background:rgba(255,255,255,0.7); padding:5px 10px; border-radius:5px; }
 </style>
 </head>
 <body>
 <div id="scoreBoard">Pollen: 0</div>
-<canvas id="gameCanvas"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let bee = { x: canvas.width/2, y: canvas.height/2, size: 20 };
-let flowers = [];
+let scene, camera, renderer, controls;
+let bee, beeSpeed = 0.5;
+let flowers = [], bears = [];
 let score = 0;
-const numFlowers = 15;
+const numFlowers = 10, numBears = 2;
 const keys = {};
 
-// Generate flowers
-for(let i=0;i<numFlowers;i++){
-    flowers.push({
-        x: Math.random()*canvas.width,
-        y: Math.random()*canvas.height,
-        size: 20,
-        color: Math.random()>0.5?'red':'pink'
+init();
+animate();
+
+function init(){
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb); // sky blue
+
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.set(0,10,15);
+
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enablePan = false;
+    controls.target.set(0,0,0);
+
+    // Light
+    const light = new THREE.DirectionalLight(0xffffff,1);
+    light.position.set(10,20,10);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0xffffff,0.5));
+
+    // Ground
+    const groundGeo = new THREE.PlaneGeometry(50,50);
+    const groundMat = new THREE.MeshPhongMaterial({color:0x228B22});
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI/2;
+    scene.add(ground);
+
+    // Bee
+    const beeGeo = new THREE.ConeGeometry(0.5,1,8);
+    const beeMat = new THREE.MeshPhongMaterial({color:0xffff00});
+    bee = new THREE.Mesh(beeGeo, beeMat);
+    bee.rotation.x = Math.PI/2;
+    bee.position.set(0,0.5,0);
+    scene.add(bee);
+
+    // Flowers
+    for(let i=0;i<numFlowers;i++){
+        const fGeo = new THREE.SphereGeometry(0.3,16,16);
+        const fMat = new THREE.MeshPhongMaterial({color: Math.random()>0.5?0xff00ff:0xff0000});
+        const f = new THREE.Mesh(fGeo, fMat);
+        f.position.set(Math.random()*20-10,0.3,Math.random()*20-10);
+        scene.add(f);
+        flowers.push(f);
+    }
+
+    // Bears
+    for(let i=0;i<numBears;i++){
+        const bGeo = new THREE.BoxGeometry(1,1,1);
+        const bMat = new THREE.MeshPhongMaterial({color:0x8B4513});
+        const b = new THREE.Mesh(bGeo,bMat);
+        b.position.set(Math.random()*20-10,0.5,Math.random()*20-10);
+        scene.add(b);
+        bears.push(b);
+    }
+
+    document.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
+    document.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
+
+    window.addEventListener('resize', ()=>{
+        camera.aspect = window.innerWidth/window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
     });
 }
 
-// Keyboard controls
-document.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
+function animate(){
+    requestAnimationFrame(animate);
 
-function update(){
-    if(keys['w']) bee.y -= 5;
-    if(keys['s']) bee.y += 5;
-    if(keys['a']) bee.x -= 5;
-    if(keys['d']) bee.x += 5;
+    // Move bee
+    if(keys['w']) bee.position.z -= beeSpeed;
+    if(keys['s']) bee.position.z += beeSpeed;
+    if(keys['a']) bee.position.x -= beeSpeed;
+    if(keys['d']) bee.position.x += beeSpeed;
 
-    // Keep bee on screen
-    bee.x = Math.max(0, Math.min(canvas.width, bee.x));
-    bee.y = Math.max(0, Math.min(canvas.height, bee.y));
-
-    // Check collisions
-    flowers.forEach(f=>{
-        const dx = bee.x - f.x;
-        const dy = bee.y - f.y;
-        if(Math.sqrt(dx*dx+dy*dy)<bee.size){
-            score++;
-            document.getElementById('scoreBoard').innerText = 'Pollen: '+score;
-            f.x = Math.random()*canvas.width;
-            f.y = Math.random()*canvas.height;
+    // Bears chase bee
+    bears.forEach(b=>{
+        const dx = bee.position.x - b.position.x;
+        const dz = bee.position.z - b.position.z;
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        if(dist>0){
+            b.position.x += (dx/dist)*0.02;
+            b.position.z += (dz/dist)*0.02;
+        }
+        if(dist < 1){
+            score = Math.max(0,score-1);
         }
     });
-}
 
-function draw(){
-    // Clear background
-    ctx.fillStyle = '#228B22'; // green field
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    // Draw flowers
+    // Collect flowers
     flowers.forEach(f=>{
-        ctx.fillStyle = f.color;
-        ctx.beginPath();
-        ctx.arc(f.x,f.y,f.size/2,0,Math.PI*2);
-        ctx.fill();
+        const dx = bee.position.x - f.position.x;
+        const dz = bee.position.z - f.position.z;
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        if(dist < 1){
+            score += 1;
+            f.position.set(Math.random()*20-10,0.3,Math.random()*20-10);
+        }
     });
 
-    // Draw bee
-    ctx.fillStyle = 'yellow';
-    ctx.beginPath();
-    ctx.arc(bee.x,bee.y,bee.size/2,0,Math.PI*2);
-    ctx.fill();
-    ctx.strokeStyle = 'black';
-    ctx.stroke();
-}
+    document.getElementById('scoreBoard').innerText = 'Pollen: '+score;
 
-function gameLoop(){
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-}
+    // Camera follows bee
+    controls.target.set(bee.position.x,bee.position.y,bee.position.z);
+    controls.update();
 
-gameLoop();
+    renderer.render(scene,camera);
+}
 </script>
 </body>
 </html>
